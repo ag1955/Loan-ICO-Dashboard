@@ -1,12 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>ICO Loan Dashboard</title>
 
-  <!-- PDF Library -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
+<title>ICO Loan Dashboard</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<style>
+
+/* THEME */
 
 :root {
   --primary: #0f2a44;
@@ -19,39 +24,63 @@
   --button: #2563eb;
 }
 
+/* BASE */
+
 body {
   font-family: "Segoe UI", Arial, sans-serif;
   background: var(--light-bg);
-  padding: 20px;
   margin: 0;
+  padding: 15px;
 }
 
 h2 {
   color: var(--primary);
+  margin-bottom: 5px;
 }
 
 h3 {
   color: var(--secondary);
+  margin-top: 0;
 }
+
+/* FILTERS */
 
 .filters {
   background: var(--card-bg);
-  padding: 20px;
+  padding: 15px;
   border-radius: 8px;
   border: 1px solid var(--border);
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  margin: 20px 0;
+  margin: 15px 0;
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
+.filter-box {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  flex: 1;
+}
+
+.filter-box label {
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+/* INPUT */
+
 select {
-  padding: 7px 10px;
+  padding: 8px;
   border-radius: 5px;
   border: 1px solid var(--border);
-  margin-right: 10px;
+  width: 100%;
 }
 
 button {
-  padding: 7px 14px;
+  padding: 9px 14px;
   border: none;
   border-radius: 5px;
   background: var(--button);
@@ -64,22 +93,30 @@ button:hover {
   opacity: 0.9;
 }
 
+/* SUMMARY */
+
 .summary {
   background: var(--card-bg);
-  padding: 15px;
+  padding: 12px;
   border-radius: 6px;
   border: 1px solid var(--border);
   margin-top: 15px;
-  font-size: 16px;
+  font-size: 15px;
+}
+
+/* TABLE */
+
+.table-wrapper {
+  overflow-x: auto;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
+  margin-top: 15px;
   background: var(--card-bg);
   border-radius: 8px;
-  overflow: hidden;
+  min-width: 600px;
 }
 
 th {
@@ -89,7 +126,7 @@ th {
 }
 
 td {
-  padding: 9px;
+  padding: 8px;
   border-bottom: 1px solid var(--border);
   text-align: center;
 }
@@ -108,11 +145,26 @@ tr:hover {
   font-weight: bold;
 }
 
+/* PDF */
+
 .pdf-only {
   display: none;
 }
 
-  </style>
+/* MOBILE */
+
+@media (max-width: 600px) {
+
+  .filters {
+    flex-direction: column;
+  }
+
+  table {
+    font-size: 13px;
+  }
+}
+
+</style>
 </head>
 
 
@@ -126,26 +178,30 @@ tr:hover {
 
 <div class="filters">
 
-  <b>File:</b>
-  <select id="fileFilter"></select>
-  <button onclick="clearFile()">Clear</button>
+  <div class="filter-box">
+    <label>File</label>
+    <select id="fileFilter"></select>
+    <button onclick="clearFile()">Clear</button>
+  </div>
 
-  <br><br>
+  <div class="filter-box">
+    <label>Client</label>
+    <select id="clientFilter"></select>
+    <button onclick="clearClient()">Clear</button>
+  </div>
 
-  <b>Client:</b>
-  <select id="clientFilter"></select>
-  <button onclick="clearClient()">Clear</button>
-
-  <br><br>
-
-  <button onclick="exportPDF()">📄 Export PDF</button>
+  <div class="filter-box">
+    <label>&nbsp;</label>
+    <button onclick="exportPDF()">📄 Export PDF</button>
+  </div>
 
 </div>
 
 
-<!-- OUTPUT AREA -->
+<!-- OUTPUT -->
 
 <div id="pdfArea">
+
 
   <!-- PDF HEADER -->
 
@@ -169,52 +225,81 @@ tr:hover {
 
   <!-- TABLE -->
 
-  <table>
+  <div class="table-wrapper">
 
-    <thead>
-      <tr>
-        <th>Client</th>
-        <th>Receivable</th>
-        <th>Payable</th>
-        <th>Net Balance</th>
-      </tr>
-    </thead>
+    <table>
 
-    <tbody id="tableBody"></tbody>
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Client</th>
+          <th>Receivable</th>
+          <th>Payable</th>
+          <th>Net Balance</th>
+        </tr>
+      </thead>
 
-  </table>
+      <tbody id="tableBody"></tbody>
+
+    </table>
+
+  </div>
 
 </div>
 
 
 <script>
 
-const API_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLhPqLQkZdsba5QlRl0izaDKRwzQp-Ps539FONA15jmXtHtZrqsiXwrQTPUkQBrP32cIVP2cTQKpc4KNwjGhJzgZun1Se5YBAbl_SVNrdjnOqLT0Di8RrF_-6kW2UNHBdoa9jIBHnVw7rK7XnxGUc8leQnRiRd0EOhrBCuFTdAxB-Iy2gwU0ynwPADycn-xzHwq81ybe7DQkAMXthuWCqIa9VY7EwVO8vVtbm3WOYHIKwAitgRSIuob71m80pynFjAqKG1EXk_BeqiIgRWLX8NKpoOc1iA&lib=M-FDxnB1VGCZDyM5l-Eicf7eUs6YUnKQP";
+/* API */
 
+const API_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLjttJskl7kQamicK4CXBiqr5RIkQ0KhYNnHgAseLlknSDYsLI40rkv2Nzgtr0KdZpK-LKuoSkeAlH3fV47qAcAO90oHsPkv5w4zUScHCV_cdXUJyZaXRmv-BKp5vCFEeE4tRnDP9DmBVi1C_4kLcWjtnZgXfsYpkt2JR5GXBE15vmJpT_M3qhPFhDQSse9qu6b7hn6JSEGMqTAQ7pDMM3qWhOzrK7hEWdHQyd8Bms4rfJ2YjYTUxjJngydx6CisLlaU6LbIUOrRwBPS3AD4o6h3q7C9kQ&lib=M-FDxnB1VGCZDyM5l-Eicf7eUs6YUnKQP";
+
+
+/* DOM */
+
+const fileFilter = document.getElementById("fileFilter");
+const clientFilter = document.getElementById("clientFilter");
+const tableBody = document.getElementById("tableBody");
+const summaryBox = document.getElementById("summaryBox");
+const monthBox = document.getElementById("monthBox");
+
+const pdfHeader = document.getElementById("pdfHeader");
+const pdfArea = document.getElementById("pdfArea");
+const pdfMonth = document.getElementById("pdfMonth");
+const pdfFile = document.getElementById("pdfFile");
+const pdfClient = document.getElementById("pdfClient");
+
+
+/* DATA */
 
 let allData = [];
 let currentMonth = "";
 
 
-// LOAD DATA
+/* LOAD */
 
 fetch(API_URL)
   .then(res => res.json())
   .then(data => {
 
     currentMonth = data.month;
-    allData = data.records;
+    allData = data.records || [];
 
-    document.getElementById("monthBox").innerText =
-      "Current Month: " + currentMonth;
+    monthBox.innerText = "Current Month: " + currentMonth;
 
     loadFileFilter(allData);
     loadClientFilter(allData);
 
+  })
+  .catch(err => {
+
+    alert("Failed to load data. Check API URL.");
+    console.error(err);
+
   });
 
 
-// LOAD FILE FILTER
+/* LOAD FILES */
 
 function loadFileFilter(data) {
 
@@ -222,19 +307,17 @@ function loadFileFilter(data) {
 
   data.forEach(d => set.add(d["File"]));
 
-  const select = document.getElementById("fileFilter");
-
-  select.innerHTML = `<option value="all">All</option>`;
+  fileFilter.innerHTML = `<option value="all">All</option>`;
 
   [...set].forEach(f => {
-    select.innerHTML += `<option>${f}</option>`;
+    fileFilter.innerHTML += `<option>${f}</option>`;
   });
 
-  select.onchange = onFileChange;
+  fileFilter.onchange = onFileChange;
 }
 
 
-// LOAD CLIENT FILTER
+/* LOAD CLIENTS */
 
 function loadClientFilter(data) {
 
@@ -242,19 +325,17 @@ function loadClientFilter(data) {
 
   data.forEach(d => set.add(d["Client Name"]));
 
-  const select = document.getElementById("clientFilter");
-
-  select.innerHTML = `<option value="all">All</option>`;
+  clientFilter.innerHTML = `<option value="all">All</option>`;
 
   [...set].forEach(c => {
-    select.innerHTML += `<option>${c}</option>`;
+    clientFilter.innerHTML += `<option>${c}</option>`;
   });
 
-  select.onchange = onClientChange;
+  clientFilter.onchange = onClientChange;
 }
 
 
-// FILE → CLIENT CASCADE
+/* FILE → CLIENT */
 
 function onFileChange() {
 
@@ -272,25 +353,35 @@ function onFileChange() {
 }
 
 
-// CLIENT → FILE CASCADE
+/* CLIENT → FILE (SHOW ALL FILES) */
 
 function onClientChange() {
 
   const client = clientFilter.value;
 
-  let filtered = allData;
+  if (client === "all") {
 
-  if (client !== "all") {
-    filtered = allData.filter(d => d["Client Name"] === client);
+    loadFileFilter(allData);
+    filterData();
+
+    return;
   }
 
+
+  const filtered = allData.filter(
+    d => d["Client Name"] === client
+  );
+
+
   loadFileFilter(filtered);
+
+  fileFilter.value = "all";
 
   filterData();
 }
 
 
-// CLEAR BUTTONS
+/* CLEAR */
 
 function clearFile() {
 
@@ -312,22 +403,19 @@ function clearClient() {
 }
 
 
-// MAIN FILTER LOGIC
+/* FILTER */
 
 function filterData() {
 
   const file = fileFilter.value;
   const client = clientFilter.value;
 
-  const tbody = document.getElementById("tableBody");
-  const summary = document.getElementById("summaryBox");
 
-
-  // BLANK BY DEFAULT
+  // Blank default
   if (file === "all" && client === "all") {
 
-    tbody.innerHTML = "";
-    summary.innerHTML = "";
+    tableBody.innerHTML = "";
+    summaryBox.innerHTML = "";
 
     return;
   }
@@ -349,7 +437,7 @@ function filterData() {
 }
 
 
-// RENDER TABLE
+/* RENDER */
 
 function renderTable(data) {
 
@@ -365,7 +453,6 @@ function renderTable(data) {
   let totalP = 0;
 
 
-  // Group by File + Client
   data.forEach(d => {
 
     const key = d["File"] + "||" + d["Client Name"];
@@ -402,7 +489,6 @@ function renderTable(data) {
   const net = totalR - totalP;
 
 
-  // Summary
   summaryBox.innerHTML = `
     Assets: ${format(totalR)} |
     Liabilities: ${format(totalP)} |
@@ -413,7 +499,6 @@ function renderTable(data) {
   `;
 
 
-  // Table rows
   for (let k in summary) {
 
     const row = summary[k];
@@ -432,65 +517,28 @@ function renderTable(data) {
       </tr>
     `;
   }
-}
-
-
-
-  const net = totalR - totalP;
-
-
-  summary.innerHTML = `
-    Assets: ${format(totalR)} |
-    Liabilities: ${format(totalP)} |
-    Net:
-    <span class="${net>=0?'positive':'negative'}">
-      ${format(net)}
-    </span>
-  `;
-
-
-  for (let c in clientSummary) {
-
-    const r = clientSummary[c].r;
-    const p = clientSummary[c].p;
-    const n = r - p;
-
-    tbody.innerHTML += `
-      <tr>
-        <td>${c}</td>
-        <td>${format(r)}</td>
-        <td>${format(p)}</td>
-        <td class="${n>=0?'positive':'negative'}">
-          ${format(n)}
-        </td>
-      </tr>
-    `;
-  }
 
 }
 
 
-// FORMAT NUMBER
+/* FORMAT */
 
-function format(num) {
+function format(n) {
 
-  return num.toLocaleString("en-IN");
+  return n.toLocaleString("en-IN");
 }
 
 
-// EXPORT PDF
+/* PDF */
 
 function exportPDF() {
 
-  document.getElementById("pdfHeader").classList.remove("pdf-only");
+  pdfHeader.classList.remove("pdf-only");
 
 
   pdfMonth.innerText = currentMonth;
   pdfFile.innerText = fileFilter.value;
   pdfClient.innerText = clientFilter.value;
-
-
-  const element = document.getElementById("pdfArea");
 
 
   const opt = {
@@ -511,9 +559,9 @@ function exportPDF() {
   };
 
 
-  html2pdf().set(opt).from(element).save().then(() => {
+  html2pdf().set(opt).from(pdfArea).save().then(() => {
 
-    document.getElementById("pdfHeader").classList.add("pdf-only");
+    pdfHeader.classList.add("pdf-only");
 
   });
 
@@ -523,4 +571,3 @@ function exportPDF() {
 
 </body>
 </html>
-
