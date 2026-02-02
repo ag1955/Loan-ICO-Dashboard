@@ -353,27 +353,31 @@ function filterData() {
 
 function renderTable(data) {
 
-  const tbody = document.getElementById("tableBody");
-  const summary = document.getElementById("summaryBox");
+  tableBody.innerHTML = "";
+  summaryBox.innerHTML = "";
 
-  tbody.innerHTML = "";
-  summary.innerHTML = "";
-
-  if (data.length === 0) return;
+  if (!data.length) return;
 
 
-  const clientSummary = {};
+  const summary = {};
 
   let totalR = 0;
   let totalP = 0;
 
 
+  // Group by File + Client
   data.forEach(d => {
 
-    const name = d["Client Name"];
+    const key = d["File"] + "||" + d["Client Name"];
 
-    if (!clientSummary[name]) {
-      clientSummary[name] = { r: 0, p: 0 };
+    if (!summary[key]) {
+
+      summary[key] = {
+        file: d["File"],
+        client: d["Client Name"],
+        r: 0,
+        p: 0
+      };
     }
 
     const amt = Number(d["Amount"]);
@@ -382,19 +386,54 @@ function renderTable(data) {
 
     if (tag === "R") {
 
-      clientSummary[name].r += amt;
+      summary[key].r += amt;
       totalR += amt;
-
     }
 
     if (tag === "P") {
 
-      clientSummary[name].p += Math.abs(amt);
+      summary[key].p += Math.abs(amt);
       totalP += Math.abs(amt);
-
     }
 
   });
+
+
+  const net = totalR - totalP;
+
+
+  // Summary
+  summaryBox.innerHTML = `
+    Assets: ${format(totalR)} |
+    Liabilities: ${format(totalP)} |
+    Net:
+    <span class="${net>=0?'positive':'negative'}">
+      ${format(net)}
+    </span>
+  `;
+
+
+  // Table rows
+  for (let k in summary) {
+
+    const row = summary[k];
+
+    const n = row.r - row.p;
+
+    tableBody.innerHTML += `
+      <tr>
+        <td>${row.file}</td>
+        <td>${row.client}</td>
+        <td>${format(row.r)}</td>
+        <td>${format(row.p)}</td>
+        <td class="${n>=0?'positive':'negative'}">
+          ${format(n)}
+        </td>
+      </tr>
+    `;
+  }
+}
+
 
 
   const net = totalR - totalP;
