@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ICO Loan Dashboard</title>
+
+  <!-- PDF Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    h2 {
+      margin-bottom: 5px;
+    }
+
+    h3 {
+      margin-top: 5px;
+      color: #444;
+    }
+
+    .filters {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 5px;
+    }
+
+    select, button {
+      padding: 6px;
+      margin-right: 10px;
+      margin-top: 5px;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .summary {
+      margin-top: 15px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      background: #eee;
+    }
+
+    .positive {
+      color: green;
+      font-weight: bold;
+    }
+
+    .negative {
+      color: red;
+      font-weight: bold;
+    }
+
+    /* PDF Styles */
+    .pdf-only {
+      display: none;
+    }
+
+    .pdf-page {
+      page-break-after: always;
+    }
+
+  </style>
+</head>
+
+
+<body>
+
+<h2>ICO Loan Portfolio Dashboard</h2>
+<h3 id="monthBox"></h3>
+
+
+<!-- FILTERS -->
+
+<div class="filters">
+
+  <label><b>File:</b></label>
+  <select id="fileFilter"></select>
+  <button onclick="clearFile()">Clear</button>
+
+  <br><br>
+
+  <label><b>Client:</b></label>
+  <select id="clientFilter"></select>
+  <button onclick="clearClient()">Clear</button>
+
+  <br><br>
+
+  <button onclick="exportPDF()">📄 Export PDF</button>
+
+</div>
+
+
+<!-- OUTPUT AREA (FOR PDF) -->
+
+<div id="pdfArea">
+
+
+  <!-- PDF HEADER -->
+  <div class="pdf-only" id="pdfHeader">
+
+    <h2>ICO Loan Statement</h2>
+
+    <p><b>Month:</b> <span id="pdfMonth"></span></p>
+
+    <p><b>File:</b> <span id="pdfFile"></span></p>
+
+    <p><b>Client:</b> <span id="pdfClient"></span></p>
+
+    <hr>
+
+  </div>
+
+
+  <!-- SUMMARY -->
+
+  <div class="summary" id="summaryBox"></div>
+
+
+  <!-- TABLE -->
+
+  <table>
+
+    <thead>
+      <tr>
+        <th>Client</th>
+        <th>Receivable</th>
+        <th>Payable</th>
+        <th>Net Balance</th>
+      </tr>
+    </thead>
+
+    <tbody id="tableBody"></tbody>
+
+  </table>
+
+</div>
+
+
+<script>
+
+const API_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLhPqLQkZdsba5QlRl0izaDKRwzQp-Ps539FONA15jmXtHtZrqsiXwrQTPUkQBrP32cIVP2cTQKpc4KNwjGhJzgZun1Se5YBAbl_SVNrdjnOqLT0Di8RrF_-6kW2UNHBdoa9jIBHnVw7rK7XnxGUc8leQnRiRd0EOhrBCuFTdAxB-Iy2gwU0ynwPADycn-xzHwq81ybe7DQkAMXthuWCqIa9VY7EwVO8vVtbm3WOYHIKwAitgRSIuob71m80pynFjAqKG1EXk_BeqiIgRWLX8NKpoOc1iA&lib=M-FDxnB1VGCZDyM5l-Eicf7eUs6YUnKQP";
+
+
+let allData = [];
+let currentMonth = "";
+
+
+// LOAD DATA
+
+fetch(API_URL)
+  .then(res => res.json())
+  .then(data => {
+
+    currentMonth = data.month;
+    allData = data.records;
+
+    document.getElementById("monthBox").innerText =
+      "Current Month: " + currentMonth;
+
+    loadFileFilter();
+    loadClientFilter(allData);
+
+    filterData();
+
+  });
+
+
+// LOAD FILE FILTER
+
+function loadFileFilter() {
+
+  const fileSet = new Set();
+
+  allData.forEach(d => fileSet.add(d["File"]));
+
+  const select = document.getElementById("fileFilter");
+
+  select.innerHTML = `<option value="all">All</option>`;
+
+  [...fileSet].forEach(f => {
+    select.innerHTML += `<option>${f}</option>`;
+  });
+
+  select.addEventListener("change", onFileChange);
+}
+
+
+// FILE CHANGE → UPDATE CLIENTS
+
+function onFileChange() {
+
+  const file = document.getElementById("fileFilter").value;
+
+  let filtered = allData;
+
+  if (file !== "all") {
+    filtered = allData.filter(d => d["File"] === file);
+  }
+
+  loadClientFilter(filtered);
+  filterData();
+}
+
+
+// LOAD CLIENT FILTER
+
+function loadClientFilter(data) {
+
+  const clientSet = new Set();
+
+  data.forEach(d => clientSet.add(d["Client Name"]));
+
+  const select = document.getElementById("clientFilter");
+
+  select.innerHTML = `<option value="all">All</option>`;
+
+  [...clientSet].forEach(c => {
+    select.innerHTML += `<option>${c}</option>`;
+  });
+
+  select.addEventListener("change", filterData);
+}
+
+
+// CLEAR BUTTONS
+
+function clearFile() {
+
+  document.getElementById("fileFilter").value = "all";
+
+  loadClientFilter(allData);
+
+  filterData();
+}
+
+
+function clearClient() {
+
+  document.getElementById("clientFilter").value = "all";
+
+  filterData();
+}
+
+
+// FILTER DATA
+
+function filterData() {
+
+  const file = document.getElementById("fileFilter").value;
+  const client = document.getElementById("clientFilter").value;
+
+  let filtered = allData;
+
+  if (file !== "all") {
+    filtered = filtered.filter(d => d["File"] === file);
+  }
+
+  if (client !== "all") {
+    filtered = filtered.filter(d => d["Client Name"] === client);
+  }
+
+  renderTable(filtered);
+}
+
+
+// RENDER TABLE
+
+function renderTable(data) {
+
+  const tbody = document.getElementById("tableBody");
+  const summary = document.getElementById("summaryBox");
+
+  tbody.innerHTML = "";
+  summary.innerHTML = "";
+
+  if (data.length === 0) return;
+
+
+  const clientSummary = {};
+
+  let totalR = 0;
+  let totalP = 0;
+
+
+  data.forEach(d => {
+
+    const name = d["Client Name"];
+
+    if (!clientSummary[name]) {
+      clientSummary[name] = { r: 0, p: 0 };
+    }
+
+    const amt = Number(d["Amount"]);
+    const tag = d["Tag - Receivable / (Payable)"];
+
+
+    if (tag === "R") {
+
+      clientSummary[name].r += amt;
+      totalR += amt;
+
+    }
+
+    if (tag === "P") {
+
+      clientSummary[name].p += Math.abs(amt);
+      totalP += Math.abs(amt);
+
+    }
+
+  });
+
+
+  const net = totalR - totalP;
+
+
+  summary.innerHTML = `
+    Assets: ${format(totalR)} |
+    Liabilities: ${format(totalP)} |
+    Net: <span class="${net>=0?'positive':'negative'}">
+      ${format(net)}
+    </span>
+  `;
+
+
+  for (let c in clientSummary) {
+
+    const r = clientSummary[c].r;
+    const p = clientSummary[c].p;
+    const n = r - p;
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${c}</td>
+        <td>${format(r)}</td>
+        <td>${format(p)}</td>
+        <td class="${n>=0?'positive':'negative'}">
+          ${format(n)}
+        </td>
+      </tr>
+    `;
+  }
+
+}
+
+
+// FORMAT NUMBERS
+
+function format(num) {
+
+  return num.toLocaleString("en-IN");
+}
+
+
+// EXPORT PDF
+
+function exportPDF() {
+
+  // Show PDF header
+  document.getElementById("pdfHeader").classList.remove("pdf-only");
+
+
+  // Fill PDF Info
+
+  document.getElementById("pdfMonth").innerText = currentMonth;
+
+  document.getElementById("pdfFile").innerText =
+    document.getElementById("fileFilter").value;
+
+  document.getElementById("pdfClient").innerText =
+    document.getElementById("clientFilter").value;
+
+
+  const element = document.getElementById("pdfArea");
+
+
+  const opt = {
+
+    margin: 10,
+    filename: "Loan_Statement.pdf",
+
+    image: { type: 'jpeg', quality: 0.98 },
+
+    html2canvas: { scale: 2 },
+
+    jsPDF: {
+      unit: 'mm',
+      format: 'a4',
+      orientation: 'portrait'
+    }
+
+  };
+
+
+  html2pdf().set(opt).from(element).save().then(() => {
+
+    // Hide PDF header again
+    document.getElementById("pdfHeader").classList.add("pdf-only");
+
+  });
+
+}
+
+</script>
+
+</body>
+</html>
