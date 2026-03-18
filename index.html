@@ -1,348 +1,571 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>AG Group Dashboard</title>
 
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>ICO Loan Dashboard</title>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <style>
-body{margin:0;font-family:Inter;background:#f4f6f8}
-header{background:#1a365d;color:#fff;padding:18px;display:flex;justify-content:space-between}
-.container{max-width:1600px;margin:auto;padding:20px}
-.card{background:#fff;padding:15px;border-radius:10px;margin-bottom:20px}
-.filters{display:flex;gap:15px;flex-wrap:wrap}
-select{width:180px;height:110px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.top5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-.top5 div{background:#fffaf0;padding:10px;border-top:4px solid #d69e2e;text-align:center}
-.table-wrap{max-height:500px;overflow:auto}
-table{width:100%;border-collapse:collapse;text-align:center;font-size:12px}
-th,td{border:1px solid #e2e8f0;padding:6px}
-th{background:#f7fafc}
-.tab{display:none}
-.tab.active{display:block}
-.page-break{page-break-before:always}
+
+/* THEME */
+
+:root {
+  --primary: #0f2a44;
+  --secondary: #1e4e79;
+  --light-bg: #f4f7fb;
+  --card-bg: #ffffff;
+  --border: #dce3ec;
+  --success: #1b8f3c;
+  --danger: #c0392b;
+  --button: #2563eb;
+}
+
+/* BASE */
+
+body {
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: var(--light-bg);
+  margin: 0;
+  padding: 15px;
+}
+
+h2 {
+  color: var(--primary);
+  margin-bottom: 5px;
+}
+
+h3 {
+  color: var(--secondary);
+  margin-top: 0;
+}
+
+/* FILTERS */
+
+.filters {
+  background: var(--card-bg);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  margin: 15px 0;
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.filter-box {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  flex: 1;
+}
+
+.filter-box label {
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+/* INPUT */
+
+select {
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  width: 100%;
+}
+
+button {
+  padding: 9px 14px;
+  border: none;
+  border-radius: 5px;
+  background: var(--button);
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+/* SUMMARY */
+
+.summary {
+  background: var(--card-bg);
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  margin-top: 15px;
+  font-size: 15px;
+}
+
+/* TABLE */
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  background: var(--card-bg);
+  border-radius: 8px;
+  min-width: 600px;
+}
+
+th {
+  background: var(--primary);
+  color: white;
+  padding: 10px;
+}
+
+td {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+tr:hover {
+  background: #f1f6fc;
+}
+
+.positive {
+  color: var(--success);
+  font-weight: bold;
+}
+
+.negative {
+  color: var(--danger);
+  font-weight: bold;
+}
+
+/* PDF */
+
+.pdf-only {
+  display: none;
+}
+
+/* MOBILE */
+
+@media (max-width: 600px) {
+
+  .filters {
+    flex-direction: column;
+  }
+
+  table {
+    font-size: 13px;
+  }
+}
+
 </style>
 </head>
 
+
 <body>
 
-<header>
-<div>
-<h2>AG Group Dashboard</h2>
-Period: <b id="periodText">--</b>
-</div>
-<div>
-<button onclick="exportPDF()">PDF</button>
-<button onclick="exportExcel()">Excel</button>
-<button onclick="resetAll()">Reset</button><br>
-<small id="lastUpdated"></small>
-</div>
-</header>
+<h2>ICO Loan Portfolio Dashboard</h2>
+<h3 id="monthBox"></h3>
 
-<div class="container">
 
 <!-- FILTERS -->
-<div class="card filters">
-<div>
-Investor<br>
-<select id="invF" multiple></select><br>
-<button onclick="clearFilter('invF')">Clear</button>
-</div>
-<div>
-Company<br>
-<select id="comF" multiple></select><br>
-<button onclick="clearFilter('comF')">Clear</button>
-</div>
-<div>
-Type<br>
-<select id="typF" multiple></select><br>
-<button onclick="clearFilter('typF')">Clear</button>
-</div>
-</div>
 
-<button onclick="showTab('insights')">Insights</button>
-<button onclick="showTab('repo')">Repository</button>
+<div class="filters">
 
-<!-- INSIGHTS -->
-<div id="insights" class="tab active">
+  <div class="filter-box">
+    <label>File</label>
+    <select id="fileFilter"></select>
+    <button onclick="clearFile()">Clear</button>
+  </div>
 
-<div class="grid">
-<div class="card">
-<h3 id="pieTitle">Company Concentration</h3>
-<div id="companyPie"></div>
-</div>
+  <div class="filter-box">
+    <label>Client</label>
+    <select id="clientFilter"></select>
+    <button onclick="clearClient()">Clear</button>
+  </div>
 
-<div class="card">
-<h3>Investment Mix</h3>
-<div id="typeDonut"></div>
-</div>
-</div>
-
-<div class="card">
-<h3 id="top5Title">Top 5</h3>
-<div id="top5Row" class="top5"></div>
-</div>
-
-<!-- DRILL -->
-<div id="drillSection" class="card" style="display:none">
-<h3>Drill Down</h3>
-<input id="drillSearch" placeholder="Search..." oninput="renderDrill()">
-<div class="table-wrap">
-<table>
-<thead>
-<tr>
-<th>Investor</th><th>Company</th><th>Type</th>
-<th>Qty</th><th>Rate</th><th>Value (L)</th><th>Date</th>
-</tr>
-</thead>
-<tbody id="drillBody"></tbody>
-</table>
-</div>
-</div>
+  <div class="filter-box">
+    <label>&nbsp;</label>
+    <button onclick="exportPDF()">📄 Export PDF</button>
+  </div>
 
 </div>
 
-<!-- REPO -->
-<div id="repo" class="tab">
-<div class="card">
-Total Qty: <b id="totalQty"></b> |
-Total Value: <b id="totalValue"></b>
+
+<!-- OUTPUT -->
+
+<div id="pdfArea">
+
+
+  <!-- PDF HEADER -->
+
+  <div id="pdfHeader" class="pdf-only">
+
+    <h2>ICO Loan Statement</h2>
+
+    <p><b>Month:</b> <span id="pdfMonth"></span></p>
+    <p><b>File:</b> <span id="pdfFile"></span></p>
+    <p><b>Client:</b> <span id="pdfClient"></span></p>
+
+    <hr>
+
+  </div>
+
+
+  <!-- SUMMARY -->
+
+  <div class="summary" id="summaryBox"></div>
+
+
+  <!-- TABLE -->
+
+  <div class="table-wrapper">
+
+    <table>
+
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Client</th>
+          <th>Receivable</th>
+          <th>Payable</th>
+          <th>Net Balance</th>
+        </tr>
+      </thead>
+
+      <tbody id="tableBody"></tbody>
+
+    </table>
+
+  </div>
+
 </div>
 
-<input id="repoSearch" placeholder="Search..." oninput="renderRepo()">
-
-<div class="table-wrap">
-<table id="repoTable">
-<thead>
-<tr>
-<th>Investor</th><th>Company</th><th>Type</th>
-<th>Qty</th><th>Rate</th><th>Value (L)</th><th>Date</th>
-</tr>
-</thead>
-<tbody id="repoBody"></tbody>
-</table>
-</div>
-</div>
-
-</div>
 
 <script>
-const DATA_URL="https://script.googleusercontent.com/macros/echo?user_content_key=AWDtjMVjq0MfxqN3nVfRFzv26s5evN-5m7Qn8Yr6saVnyBArSHVSPM6spfnbbYchG-_705UKGveR7y9g-VNBYsVr3kN84Tir8j7_NWBVPXeSMF9m9GA0uJPDIAweFFHyZP2WEzTsWkxHUPy5EtdUt1ayH44BaOilAlipnvIwaQRJHfnNmymHOrR1OSa8Bw_eAlOLnvve9lbh8SECpVaFmlTymH6-H4GZQcm92up56BEiEFRiKDI2da16SIqsy5KILI5DtYGzDzRk5DceVL_ekfHYvhwKY1wVAA&lib=MLfLtmcdnFe_9PafX9g6m-beUs6YUnKQP";
 
-let rawData=[],filteredData=[],drillData=[];
+/* API */
 
-fetch(DATA_URL).then(r=>r.json()).then(j=>{
-rawData=j.data||[];
-periodText.innerText=j.period||"--";
-lastUpdated.innerText=j.lastUpdated||"--";
-initFilters();
-applyFilters();
-});
+const API_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AY5xjrTYK04oOewC7_b6bC9dtqgAP8cSirwLEAQEZKae8rGn93QVifCQ061J0I4XBZD3UZDTRkQ3l7dkb_69NS3dx9pQnD9wTyp1VTQGoC9jwrJ1tLfvHv9LWoR47WaruEaIwrTUJGrSdYh7bcyNDh7RVcGhhDxzPimRwJ35VsjL62m4ByH53vCB9C2-sQj-37tcbk_Qup8ydJzy9ByyRnXo-7KX9WYzI8LTLzoD7aV6tq9Eos0mLRyPqg3DWd_VpCIJoBj-g4zAB85_v_zMgDZquEygV5R7kQ&lib=M-FDxnB1VGCZDyM5l-Eicf7eUs6YUnKQP"
 
-const s=v=>String(v||"");
-const selected=id=>[...document.getElementById(id).selectedOptions].map(o=>o.value);
+/* DOM */
 
-function initFilters(){
-['invF','comF','typF'].forEach(id=>document.getElementById(id).onchange=applyFilters);
-buildFilters(rawData);
+const fileFilter = document.getElementById("fileFilter");
+const clientFilter = document.getElementById("clientFilter");
+const tableBody = document.getElementById("tableBody");
+const summaryBox = document.getElementById("summaryBox");
+const monthBox = document.getElementById("monthBox");
+
+const pdfHeader = document.getElementById("pdfHeader");
+const pdfArea = document.getElementById("pdfArea");
+const pdfMonth = document.getElementById("pdfMonth");
+const pdfFile = document.getElementById("pdfFile");
+const pdfClient = document.getElementById("pdfClient");
+
+
+/* DATA */
+
+let allData = [];
+let currentMonth = "";
+
+
+/* LOAD */
+
+fetch(API_URL)
+  .then(res => res.json())
+  .then(data => {
+
+    currentMonth = data.month;
+    allData = data.records || [];
+
+    monthBox.innerText = "Current Month: " + currentMonth;
+
+    loadFileFilter(allData);
+    loadClientFilter(allData);
+
+  })
+  .catch(err => {
+
+    alert("Failed to load data. Check API URL.");
+    console.error(err);
+
+  });
+
+
+/* LOAD FILES */
+
+function loadFileFilter(data) {
+
+  const set = new Set();
+
+  data.forEach(d => set.add(d["File"]));
+
+  fileFilter.innerHTML = `<option value="all">All</option>`;
+
+  [...set].forEach(f => {
+    fileFilter.innerHTML += `<option>${f}</option>`;
+  });
+
+  fileFilter.onchange = onFileChange;
 }
 
-function buildFilters(data){
-fill('invF','Investor',data);
-fill('comF','Name of the Company',data);
-fill('typF','Type',data);
+
+/* LOAD CLIENTS */
+
+function loadClientFilter(data) {
+
+  const set = new Set();
+
+  data.forEach(d => set.add(d["Client Name"]));
+
+  clientFilter.innerHTML = `<option value="all">All</option>`;
+
+  [...set].forEach(c => {
+    clientFilter.innerHTML += `<option>${c}</option>`;
+  });
+
+  clientFilter.onchange = onClientChange;
 }
 
-function fill(id,key,data){
-const sel=document.getElementById(id);
-const vals=[...new Set(data.map(d=>s(d[key])))].filter(v=>v).sort();
-sel.innerHTML='<option value="All">All</option>'+vals.map(v=>`<option>${v}</option>`).join('');
+
+/* FILE → CLIENT */
+
+function onFileChange() {
+
+  const file = fileFilter.value;
+
+  let filtered = allData;
+
+  if (file !== "all") {
+    filtered = allData.filter(d => d["File"] === file);
+  }
+
+  loadClientFilter(filtered);
+
+  filterData();
 }
 
-function applyFilters(){
-drillData=[];
-drillSection.style.display="none";
 
-const iv=selected('invF'),co=selected('comF'),ty=selected('typF');
+/* CLIENT → FILE (SHOW ALL FILES) */
 
-filteredData=rawData.filter(d=>
-(iv.includes("All")||iv.includes(s(d.Investor))) &&
-(co.includes("All")||co.includes(s(d["Name of the Company"]))) &&
-(ty.includes("All")||ty.includes(s(d.Type)))
-);
+function onClientChange() {
 
-buildFilters(filteredData);
-renderAll();
+  const client = clientFilter.value;
+
+  if (client === "all") {
+
+    loadFileFilter(allData);
+    filterData();
+
+    return;
+  }
+
+
+  const filtered = allData.filter(
+    d => d["Client Name"] === client
+  );
+
+
+  loadFileFilter(filtered);
+
+  fileFilter.value = "all";
+
+  filterData();
 }
 
-function clearFilter(id){
-[...document.getElementById(id).options].forEach(o=>o.selected=o.value==="All");
-applyFilters();
+
+/* CLEAR */
+
+function clearFile() {
+
+  fileFilter.value = "all";
+
+  loadClientFilter(allData);
+
+  filterData();
 }
 
-function resetAll(){
-drillData=[];
-drillSection.style.display="none";
-['invF','comF','typF'].forEach(id=>{
-[...document.getElementById(id).options].forEach(o=>o.selected=o.value==="All");
-});
-applyFilters();
+
+function clearClient() {
+
+  clientFilter.value = "all";
+
+  loadFileFilter(allData);
+
+  filterData();
 }
 
-function showTab(t){
-document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-document.getElementById(t).classList.add('active');
+
+/* FILTER */
+
+function filterData() {
+
+  const file = fileFilter.value;
+  const client = clientFilter.value;
+
+
+  // Blank default
+  if (file === "all" && client === "all") {
+
+    tableBody.innerHTML = "";
+    summaryBox.innerHTML = "";
+
+    return;
+  }
+
+
+  let filtered = allData;
+
+
+  if (file !== "all") {
+    filtered = filtered.filter(d => d["File"] === file);
+  }
+
+  if (client !== "all") {
+    filtered = filtered.filter(d => d["Client Name"] === client);
+  }
+
+
+  renderTable(filtered);
 }
 
-function renderAll(){
-renderCharts();
-renderTop5();
-renderRepo();
+
+/* RENDER */
+
+function renderTable(data) {
+
+  tableBody.innerHTML = "";
+  summaryBox.innerHTML = "";
+
+  if (!data.length) return;
+
+
+  const summary = {};
+
+  let totalR = 0;
+  let totalP = 0;
+
+
+  data.forEach(d => {
+
+    const key = d["File"] + "||" + d["Client Name"];
+
+    if (!summary[key]) {
+
+      summary[key] = {
+        file: d["File"],
+        client: d["Client Name"],
+        r: 0,
+        p: 0
+      };
+    }
+
+    const amt = Number(d["Amount"]);
+    const tag = d["Tag - Receivable / (Payable)"];
+
+
+    if (tag === "R") {
+
+      summary[key].r += amt;
+      totalR += amt;
+    }
+
+    if (tag === "P") {
+
+      summary[key].p += Math.abs(amt);
+      totalP += Math.abs(amt);
+    }
+
+  });
+
+
+  const net = totalR - totalP;
+
+
+  summaryBox.innerHTML = `
+    Assets: ${format(totalR)} |
+    Liabilities: ${format(totalP)} |
+    Net:
+    <span class="${net>=0?'positive':'negative'}">
+      ${format(net)}
+    </span>
+  `;
+
+
+  for (let k in summary) {
+
+    const row = summary[k];
+
+    const n = row.r - row.p;
+
+    tableBody.innerHTML += `
+      <tr>
+        <td>${row.file}</td>
+        <td>${row.client}</td>
+        <td>${format(row.r)}</td>
+        <td>${format(row.p)}</td>
+        <td class="${n>=0?'positive':'negative'}">
+          ${format(n)}
+        </td>
+      </tr>
+    `;
+  }
+
 }
 
-function renderCharts(){
-const total=filteredData.reduce((a,b)=>a+(+b.Value||0),0)/100000;
-const selCom=selected('comF').filter(x=>x!=="All");
 
-let labels=[],values=[],others=0;
+/* FORMAT */
 
-if(selCom.length===1){
-pieTitle.innerText="Investor-wise Holding";
-const m={};
-filteredData.forEach(d=>{
-m[d.Investor]=(m[d.Investor]||0)+(+d.Value||0)/100000;
-});
-labels=Object.keys(m);values=Object.values(m);
-}else{
-pieTitle.innerText="Company Concentration";
-const m={};
-filteredData.forEach(d=>{
-m[d["Name of the Company"]]=(m[d["Name of the Company"]]||0)+(+d.Value||0)/100000;
-});
-Object.entries(m).forEach(([k,v])=>{
-if(v/total<0.02) others+=v;
-else{labels.push(k);values.push(v);}
-});
-if(others>0){labels.push("Others (<2%)");values.push(others);}
+function format(n) {
+
+  return n.toLocaleString("en-IN");
 }
 
-Plotly.newPlot(companyPie,[{labels,values,type:"pie",hole:0.35}],
-{annotations:[{text:"₹ "+total.toFixed(2)+" L",showarrow:false}]});
 
-companyPie.on("plotly_click",e=>{
-const l=e.points[0].label;
-drillData=filteredData.filter(d=>JSON.stringify(d).includes(l));
-drillSection.style.display="block";
-renderDrill();
-});
+/* PDF */
 
-const typeMap={};
-filteredData.forEach(d=>{
-typeMap[d.Type]=(typeMap[d.Type]||0)+(+d.Value||0)/100000;
-});
+function exportPDF() {
 
-Plotly.newPlot(typeDonut,[{labels:Object.keys(typeMap),values:Object.values(typeMap),type:"pie",hole:0.6}],
-{annotations:[{text:"₹ "+total.toFixed(2)+" L",showarrow:false}]});
+  pdfHeader.classList.remove("pdf-only");
 
-typeDonut.on("plotly_click",e=>{
-const l=e.points[0].label;
-drillData=filteredData.filter(d=>d.Type===l);
-drillSection.style.display="block";
-renderDrill();
-});
+
+  pdfMonth.innerText = currentMonth;
+  pdfFile.innerText = fileFilter.value;
+  pdfClient.innerText = clientFilter.value;
+
+
+  const opt = {
+
+    margin: 10,
+    filename: "Loan_Statement.pdf",
+
+    image: { type: 'jpeg', quality: 0.98 },
+
+    html2canvas: { scale: 2 },
+
+    jsPDF: {
+      unit: 'mm',
+      format: 'a4',
+      orientation: 'portrait'
+    }
+
+  };
+
+
+  html2pdf().set(opt).from(pdfArea).save().then(() => {
+
+    pdfHeader.classList.add("pdf-only");
+
+  });
+
 }
 
-function renderDrill(){
-const q=drillSearch.value.toLowerCase();
-const data=drillData.filter(d=>JSON.stringify(d).toLowerCase().includes(q));
-drillBody.innerHTML=data.map(d=>`
-<tr>
-<td>${d.Investor}</td>
-<td>${d["Name of the Company"]}</td>
-<td>${d.Type}</td>
-<td>${d.Qty}</td>
-<td>${d["Rate per share"]}</td>
-<td>${(+d.Value/100000).toFixed(2)}</td>
-<td>${d.DOA}</td>
-</tr>`).join('');
-}
-
-function renderTop5(){
-const base=drillData.length?drillData:filteredData;
-const map={},qtyMap={};
-const total=base.reduce((a,b)=>a+(+b.Value||0),0)/100000;
-
-base.forEach(d=>{
-const k=d["Name of the Company"];
-map[k]=(map[k]||0)+(+d.Value||0)/100000;
-qtyMap[k]=(qtyMap[k]||0)+(+d.Qty||0);
-});
-
-top5Row.innerHTML=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,5)
-.map(([k,v])=>{
-const pct=total>0?((v/total)*100).toFixed(1):0;
-return `<div><b>${k}</b><br>Qty:${qtyMap[k]}<br>₹${v.toFixed(2)}L<br>${pct}%</div>`;
-}).join('');
-}
-
-function renderRepo(){
-const q=repoSearch.value.toLowerCase();
-const data=filteredData.filter(d=>JSON.stringify(d).toLowerCase().includes(q));
-
-repoBody.innerHTML=data.map(d=>`
-<tr>
-<td>${d.Investor}</td>
-<td>${d["Name of the Company"]}</td>
-<td>${d.Type}</td>
-<td>${d.Qty}</td>
-<td>${d["Rate per share"]}</td>
-<td>${(+d.Value/100000).toFixed(2)}</td>
-<td>${d.DOA}</td>
-</tr>`).join('');
-
-const qty=data.reduce((a,b)=>a+(+b.Qty||0),0);
-const val=data.reduce((a,b)=>a+(+b.Value||0),0)/100000;
-totalQty.innerText=qty;
-totalValue.innerText="₹ "+val.toFixed(2)+" L";
-}
-
-async function exportPDF(){
-const pie=await Plotly.toImage(companyPie,{format:"png"});
-const donut=await Plotly.toImage(typeDonut,{format:"png"});
-
-const box=document.createElement("div");
-box.innerHTML=`
-<h2>AG Group Report</h2>
-<p>${periodText.innerText}</p>
-<h3>Company Concentration</h3>
-<img src="${pie}">
-<h3>Investment Mix</h3>
-<img src="${donut}">
-<div class="page-break"></div>
-${repoTable.outerHTML}
-`;
-
-html2pdf().from(box).save();
-}
-
-function exportExcel(){
-const wb=XLSX.utils.book_new();
-const rows=filteredData.map(d=>({
-Investor:d.Investor,
-Company:d["Name of the Company"],
-Type:d.Type,
-Qty:d.Qty,
-Rate:d["Rate per share"],
-Value:(+d.Value/100000).toFixed(2),
-Date:d.DOA
-}));
-XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Data");
-XLSX.writeFile(wb,"Data.xlsx");
-}
 </script>
 
 </body>
